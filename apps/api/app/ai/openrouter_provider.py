@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import requests
 
-from app.ai.ai_provider import AiProviderError, parse_json_content
+from app.ai.ai_provider import AiProviderError, clean_env_value, parse_json_content
 
 
 class OpenRouterProvider:
     name = "OPENROUTER"
 
     def __init__(self, api_key: str | None, model: str) -> None:
-        self.api_key = api_key
-        self.model = model
+        self.api_key = clean_env_value(api_key)
+        self.model = clean_env_value(model)
 
     def analyze(self, system_prompt: str, user_prompt: str) -> dict:
         if not self.api_key:

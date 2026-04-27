@@ -8,6 +8,10 @@ class AiProviderError(Exception):
     pass
 
 
+def clean_env_value(value: str | None) -> str:
+    return (value or "").strip().lstrip("\ufeff")
+
+
 def parse_json_content(content: str) -> dict:
     text = content.strip()
     if text.startswith("```"):

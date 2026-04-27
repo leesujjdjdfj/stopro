@@ -51,7 +51,14 @@ class MarketNewsAnalyzer:
                 result = self._shape_ai_result(display_ticker, company, news, ai_result, provider.name)
                 cache.set(cache_key, result, AI_NEWS_CACHE_TTL_SECONDS)
                 return result
-            except Exception:
+            except Exception as exc:
+                print(
+                    "news_ai_provider_failed "
+                    f"provider={provider.name} "
+                    f"model={getattr(provider, 'model', '')} "
+                    f"has_key={bool(getattr(provider, 'api_key', None))} "
+                    f"error={type(exc).__name__}: {exc}"
+                )
                 continue
 
         result = self._fallback_result(display_ticker, company, news, provider="RULE_BASED", reason="AI API 호출에 실패해 규칙 기반으로 요약했습니다.")

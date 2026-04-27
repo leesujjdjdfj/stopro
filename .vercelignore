@@ -1,0 +1,9 @@
+**/.env
+**/.env.*
+!**/.env.example
+**/.venv
+**/node_modules
+**/.next
+**/*.log
+**/*.db
+**/.kis_token_cache.json
