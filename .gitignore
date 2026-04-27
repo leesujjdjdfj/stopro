@@ -1,0 +1,32 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.kis_token_cache.json
+stopro.db
+
+# Node
+node_modules/
+.next/
+.vercel/
+out/
+dist/
+*.log
+*.out.log
+*.err.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Local
+shell-start-test.txt
+*.sqlite
+*.sqlite3
+.idea/
+.vscode/
