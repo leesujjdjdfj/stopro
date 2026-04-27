@@ -104,7 +104,11 @@ def _signal_from_analysis(result: dict) -> dict:
     ma20 = indicators.get("ma20")
     return {
         "ticker": result.get("ticker"),
+        "displayTicker": result.get("displayTicker"),
         "name": result.get("name"),
+        "market": result.get("market"),
+        "exchange": result.get("exchange"),
+        "currency": result.get("currency"),
         "price": price,
         "dailyChangePercent": result.get("dailyChangePercent"),
         "decision": result.get("decision", {}).get("status"),

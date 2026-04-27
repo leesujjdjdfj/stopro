@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/common/Badge";
 import { Card } from "@/components/common/Card";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import type { AnalysisResponse } from "@/types/analysis";
 
 export function AiSummaryCard({ analysis }: { analysis: AnalysisResponse }) {
@@ -15,8 +16,8 @@ export function AiSummaryCard({ analysis }: { analysis: AnalysisResponse }) {
             <Badge tone={analysis.decision.status === "candidate" ? "green" : analysis.decision.status === "caution" || analysis.decision.status === "avoid" ? "red" : "orange"}>
               {analysis.decision.label}
             </Badge>
-            <span className="text-xs font-bold text-subText">{analysis.ticker}</span>
           </div>
+          <StockIdentity stock={analysis} className="mt-2" nameClassName="text-lg font-black text-text" />
           <p className="mt-3 text-[15px] font-semibold leading-7 text-text">{analysis.summary}</p>
         </div>
       </div>

@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.analysis.engine import AnalysisEngine
 from app.core.errors import StockDataError
 from app.core.utils import normalize_ticker
+from app.data.symbol_search import lookup_symbol
 from app.db.database import get_session
 from app.db.models import Watchlist
 from app.db.repository import add_watchlist, get_settings_dict, save_snapshot, update_watchlist_analysis
@@ -16,8 +17,9 @@ engine = AnalysisEngine()
 
 
 @router.get("")
-def list_watchlist(session: Session = Depends(get_session)) -> list[Watchlist]:
-    return session.exec(select(Watchlist).order_by(Watchlist.created_at.desc())).all()
+def list_watchlist(session: Session = Depends(get_session)) -> list[dict]:
+    items = session.exec(select(Watchlist).order_by(Watchlist.created_at.desc())).all()
+    return [_with_identity(item) for item in items]
 
 
 @router.post("")
@@ -52,3 +54,19 @@ def analyze_all(session: Session = Depends(get_session)) -> dict:
         except StockDataError as exc:
             errors.append({"ticker": item.ticker, "message": exc.message})
     return {"results": results, "errors": errors}
+
+
+def _with_identity(item: Watchlist) -> dict:
+    data = item.model_dump()
+    symbol = lookup_symbol(item.ticker) or {}
+    display_ticker = normalize_ticker(item.ticker).replace(".KS", "").replace(".KQ", "")
+    data.update(
+        {
+            "displayTicker": display_ticker,
+            "name": symbol.get("name") or display_ticker,
+            "market": symbol.get("market") or ("KRX" if display_ticker.isdigit() else "US"),
+            "exchange": symbol.get("exchange") or ("KRX" if display_ticker.isdigit() else symbol.get("market") or "US"),
+            "currency": symbol.get("currency") or ("KRW" if display_ticker.isdigit() else "USD"),
+        }
+    )
+    return data

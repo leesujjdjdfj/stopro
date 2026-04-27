@@ -1,6 +1,11 @@
 export interface WatchlistItem {
   id: number;
   ticker: string;
+  displayTicker?: string;
+  name?: string | null;
+  market?: string | null;
+  exchange?: string | null;
+  currency?: string | null;
   note?: string | null;
   created_at: string;
   last_analyzed_at?: string | null;

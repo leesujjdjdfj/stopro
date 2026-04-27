@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleDashed, OctagonAlert, PauseCircle } from "lucide-react";
 import { Card } from "@/components/common/Card";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import type { AnalysisResponse } from "@/types/analysis";
 
 const iconMap = {
@@ -17,6 +18,7 @@ export function DecisionCard({ analysis }: { analysis: AnalysisResponse }) {
   const percent = suitability?.percent ?? analysis.decision.buySuitabilityPercent ?? analysis.decision.score;
   return (
     <Card>
+      <StockIdentity stock={analysis} className="mb-4" nameClassName="text-lg font-black text-text" />
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-subText">투자 판단 보조</p>

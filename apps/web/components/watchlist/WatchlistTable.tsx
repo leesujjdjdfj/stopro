@@ -3,6 +3,7 @@ import { Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import { formatDateTime, formatNumber, toneForRisk } from "@/lib/format";
 import type { WatchlistItem } from "@/types/portfolio";
 
@@ -13,8 +14,8 @@ export function WatchlistTable({ items, onDelete }: { items: WatchlistItem[]; on
         {items.map((item) => (
           <div key={item.ticker} className="rounded-[8px] border border-border p-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-lg font-black text-text">{item.ticker}</p>
+              <div className="min-w-0">
+                <StockIdentity stock={item} nameClassName="text-lg font-black text-text" />
                 {item.note && <p className="mt-1 text-sm leading-6 text-subText">{item.note}</p>}
               </div>
               {item.last_decision && <Badge tone={item.last_decision === "candidate" || item.last_decision === "split_buy" ? "green" : item.last_decision === "caution" || item.last_decision === "avoid" ? "red" : "orange"}>{item.last_decision}</Badge>}

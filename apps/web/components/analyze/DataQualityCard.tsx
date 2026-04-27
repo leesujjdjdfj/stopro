@@ -1,6 +1,7 @@
 import { Database } from "lucide-react";
 import { Card } from "@/components/common/Card";
 import { Badge } from "@/components/common/Badge";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import { formatDateTime } from "@/lib/format";
 import type { AnalysisResponse } from "@/types/analysis";
 
@@ -9,6 +10,7 @@ export function DataQualityCard({ analysis }: { analysis: AnalysisResponse }) {
   const tone = q.status === "good" ? "green" : q.status === "partial" ? "orange" : "red";
   return (
     <Card title="데이터 품질">
+      <StockIdentity stock={analysis} className="mb-4" />
       <div className="flex items-start gap-3">
         <Database className="mt-1 h-5 w-5 text-primary" />
         <div>

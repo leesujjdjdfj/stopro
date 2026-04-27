@@ -54,7 +54,10 @@ export interface StrategyPlan {
 
 export interface AnalysisResponse {
   ticker: string;
+  displayTicker?: string;
   name: string;
+  market?: string | null;
+  exchange?: string | null;
   currency: string;
   exchangeRate: number;
   usdKrw?: number;
@@ -189,7 +192,11 @@ export interface DashboardResponse {
 
 export interface WatchlistSignal {
   ticker: string;
+  displayTicker?: string;
   name?: string;
+  market?: string | null;
+  exchange?: string | null;
+  currency?: string | null;
   price?: number | null;
   dailyChangePercent?: number | null;
   decision: DecisionStatus;

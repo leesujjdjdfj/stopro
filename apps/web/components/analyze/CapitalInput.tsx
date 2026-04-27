@@ -1,7 +1,7 @@
 "use client";
 
 import { QUICK_CAPITALS, RISK_PROFILES } from "@/lib/constants";
-import { formatKRW } from "@/lib/format";
+import { formatKRW, formatKRWInput, parseNumberInput } from "@/lib/format";
 
 export function CapitalInput({
   capital,
@@ -17,14 +17,19 @@ export function CapitalInput({
   return (
     <div className="rounded-[8px] border border-border bg-white p-4 shadow-soft">
       <label className="text-xs font-bold text-subText">투자금</label>
-      <input
-        value={capital}
-        type="number"
-        min={0}
-        onChange={(event) => onCapitalChange(Number(event.target.value))}
-        className="mt-1 min-h-12 w-full rounded-[8px] bg-cardSoft px-3 text-xl font-black text-text outline-none"
-      />
+      <div className="mt-1 flex min-h-12 items-center rounded-[8px] bg-cardSoft px-3">
+        <input
+          value={formatKRWInput(capital)}
+          type="text"
+          inputMode="numeric"
+          onChange={(event) => onCapitalChange(parseNumberInput(event.target.value))}
+          placeholder="1,000,000"
+          className="min-w-0 flex-1 bg-transparent text-xl font-black text-text outline-none placeholder:text-subText"
+        />
+        <span className="shrink-0 text-sm font-black text-subText">원</span>
+      </div>
       <p className="mt-1 text-xs font-bold text-primary">{formatKRW(capital)}</p>
+      <p className="mt-1 text-xs font-semibold text-subText">입력한 금액 기준으로 권장 수량과 손익을 계산해요.</p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {QUICK_CAPITALS.map((item) => (
           <button

@@ -72,9 +72,12 @@ class KisProvider:
             previous_close = current_price - daily_change
 
         symbol = lookup_symbol(code) or {}
+        market = symbol.get("market") or "KRX"
         quote = {
             "ticker": code,
-            "name": output.get("hts_kor_isnm") or symbol.get("name") or code,
+            "displayTicker": code,
+            "name": symbol.get("name") or output.get("hts_kor_isnm") or code,
+            "market": market,
             "currency": "KRW",
             "exchange": "KRX",
             "price": safe_float(current_price, 4),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -11,6 +12,7 @@ from app.core.cache import cache
 from app.core.config import get_settings
 from app.core.errors import StockDataError
 from app.core.utils import normalize_ticker, safe_float, safe_int
+from app.data.symbol_search import lookup_symbol
 
 
 PERIOD_MAP = {
@@ -28,6 +30,7 @@ class YFinanceProvider:
 
     def __init__(self) -> None:
         self.settings = get_settings()
+        self._disable_bad_proxy_env()
 
     def get_history(self, ticker: str, period: str = "1y") -> tuple[pd.DataFrame, bool, str]:
         ticker = normalize_ticker(ticker)
@@ -93,6 +96,10 @@ class YFinanceProvider:
                 info = {}
                 fast_info = {}
 
+        symbol = lookup_symbol(ticker) or {}
+        market = symbol.get("market") or info.get("exchange") or fast_info.get("exchange") or ("KRX" if self._is_domestic_ticker(ticker) else "US")
+        exchange = "KRX" if self._is_domestic_ticker(ticker) else market
+        display_ticker = ticker.replace(".KS", "").replace(".KQ", "") if self._is_domestic_ticker(ticker) else ticker
         close = safe_float(latest.get("Close"), 4)
         previous_close = safe_float(previous.get("Close"), 4)
         daily_change = safe_float((close or 0) - (previous_close or close or 0), 4)
@@ -100,10 +107,12 @@ class YFinanceProvider:
         volume = safe_int(latest.get("Volume"))
         average_volume = safe_int(info.get("averageVolume") or info.get("averageDailyVolume10Day") or history["Volume"].tail(20).mean())
         quote = {
-            "ticker": ticker,
-            "name": info.get("shortName") or info.get("longName") or ticker,
-            "currency": info.get("currency") or fast_info.get("currency") or ("KRW" if self._is_domestic_ticker(ticker) else "USD"),
-            "exchange": info.get("exchange") or fast_info.get("exchange") or ("KRX" if self._is_domestic_ticker(ticker) else None),
+            "ticker": display_ticker,
+            "displayTicker": display_ticker,
+            "name": info.get("longName") or info.get("shortName") or symbol.get("name") or display_ticker,
+            "market": market,
+            "currency": info.get("currency") or fast_info.get("currency") or symbol.get("currency") or ("KRW" if self._is_domestic_ticker(ticker) else "USD"),
+            "exchange": exchange,
             "price": close,
             "previousClose": previous_close,
             "dailyChange": daily_change,
@@ -185,6 +194,12 @@ class YFinanceProvider:
         if ticker.isdigit() and len(ticker) == 6:
             return [f"{ticker}.KS", f"{ticker}.KQ"]
         return [ticker]
+
+    def _disable_bad_proxy_env(self) -> None:
+        for key in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]:
+            value = os.environ.get(key)
+            if value and "127.0.0.1:9" in value:
+                os.environ.pop(key, None)
 
     def _fallback_history(self, ticker: str, period: str) -> pd.DataFrame:
         days = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365, "2y": 730, "5y": 1260}.get(period, 365)

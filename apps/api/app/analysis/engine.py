@@ -64,9 +64,17 @@ class AnalysisEngine:
         backtest = run_backtest(history_with_indicators)
         chart = self._build_chart(history_with_indicators)
 
+        display_ticker = quote.get("displayTicker") or quote.get("ticker") or normalized
+        response_ticker = quote.get("ticker") or display_ticker
+        market = quote.get("market") or quote.get("exchange")
+        exchange = quote.get("exchange") or market
+
         response = {
-            "ticker": normalized,
-            "name": quote.get("name") or normalized,
+            "ticker": response_ticker,
+            "displayTicker": display_ticker,
+            "name": quote.get("name") or display_ticker,
+            "market": market,
+            "exchange": exchange,
             "currency": currency,
             "exchangeRate": safe_float(price_exchange_rate, 4),
             "usdKrw": safe_float(usd_krw, 4),

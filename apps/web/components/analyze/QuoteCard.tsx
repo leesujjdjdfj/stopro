@@ -1,4 +1,5 @@
 import { Card } from "@/components/common/Card";
+import { StockIdentity } from "@/components/common/StockIdentity";
 import { formatDateTime, formatNumber, formatPercent, formatPrice, toneForChange } from "@/lib/format";
 import type { AnalysisResponse } from "@/types/analysis";
 
@@ -7,7 +8,7 @@ export function QuoteCard({ analysis }: { analysis: AnalysisResponse }) {
     <Card title="시세">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-subText">{analysis.name}</p>
+          <StockIdentity stock={analysis} nameClassName="text-sm font-black text-subText" />
           <p className="mt-1 text-3xl font-black text-text">{formatPrice(analysis.currentPrice, analysis.currency)}</p>
         </div>
         <p className={`text-lg font-black ${toneForChange(analysis.dailyChangePercent)}`}>{formatPercent(analysis.dailyChangePercent)}</p>
