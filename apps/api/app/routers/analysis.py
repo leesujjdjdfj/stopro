@@ -16,9 +16,9 @@ engine = AnalysisEngine()
 @router.post("/analyze")
 def analyze(payload: AnalysisRequest, session: Session = Depends(get_session)) -> dict:
     try:
-        result = engine.analyze(payload.ticker, payload.capitalKRW, payload.riskProfile)
+        result = engine.analyze(payload.ticker)
     except StockDataError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    save_snapshot(session, result, payload.capitalKRW)
+    save_snapshot(session, result)
     update_watchlist_analysis(session, payload.ticker, result)
     return result

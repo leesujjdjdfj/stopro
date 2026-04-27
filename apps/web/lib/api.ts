@@ -1,4 +1,4 @@
-import type { AnalysisResponse, DashboardResponse, SymbolSearchResult, TriggeredAlert } from "@/types/analysis";
+import type { AnalysisResponse, DashboardResponse, NewsAnalysisResponse, SymbolSearchResult, TriggeredAlert } from "@/types/analysis";
 import type { AlertItem, MemoItem, PositionItem, WatchlistItem } from "@/types/portfolio";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -29,8 +29,10 @@ export const api = {
   health: () => apiFetch<{ status: string }>("/health"),
   searchSymbols: (query: string) => apiFetch<SymbolSearchResult[]>(`/api/search?q=${encodeURIComponent(query)}&limit=10`),
   dashboard: () => apiFetch<DashboardResponse>("/api/dashboard"),
-  analyze: (payload: { ticker: string; capitalKRW: number; riskProfile: string }) =>
+  analyze: (payload: { ticker: string }) =>
     apiFetch<AnalysisResponse>("/api/analyze", { method: "POST", body: JSON.stringify(payload) }),
+  analyzeNews: (payload: { ticker: string; companyName?: string; currentPrice?: number; dailyChangePercent?: number | null }) =>
+    apiFetch<NewsAnalysisResponse>("/api/news-analysis", { method: "POST", body: JSON.stringify(payload) }),
   getWatchlist: () => apiFetch<WatchlistItem[]>("/api/watchlist"),
   addWatchlist: (payload: { ticker: string; note?: string }) =>
     apiFetch<WatchlistItem>("/api/watchlist", { method: "POST", body: JSON.stringify(payload) }),

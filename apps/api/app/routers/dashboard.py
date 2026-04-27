@@ -9,7 +9,7 @@ from app.analysis.engine import AnalysisEngine
 from app.core.errors import StockDataError
 from app.db.database import get_session
 from app.db.models import Alert, AnalysisSnapshot, Position, Watchlist
-from app.db.repository import get_settings_dict, recent_snapshots, save_snapshot, update_watchlist_analysis
+from app.db.repository import recent_snapshots, save_snapshot, update_watchlist_analysis
 from app.routers.alerts import evaluate_alert
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -18,9 +18,6 @@ engine = AnalysisEngine()
 
 @router.get("")
 def dashboard(session: Session = Depends(get_session)) -> dict:
-    settings = get_settings_dict(session)
-    capital = float(settings.get("defaultCapitalKRW", 5_000_000))
-    risk_profile = settings.get("defaultRiskProfile", "balanced")
     watchlist = session.exec(select(Watchlist).order_by(Watchlist.created_at.desc())).all()
     alerts = session.exec(select(Alert).where(Alert.is_active == True)).all()  # noqa: E712
     positions = session.exec(select(Position)).all()
@@ -29,8 +26,8 @@ def dashboard(session: Session = Depends(get_session)) -> dict:
     errors = []
     for item in watchlist[:12]:
         try:
-            result = engine.analyze(item.ticker, capital, risk_profile)
-            save_snapshot(session, result, capital)
+            result = engine.analyze(item.ticker)
+            save_snapshot(session, result)
             update_watchlist_analysis(session, item.ticker, result)
             analyzed.append(_signal_from_analysis(result))
         except StockDataError as exc:

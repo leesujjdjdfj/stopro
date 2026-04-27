@@ -10,8 +10,6 @@ from app.db.models import Alert, AnalysisSnapshot, Memo, Position, Setting, Watc
 
 
 DEFAULT_SETTINGS = {
-    "defaultCapitalKRW": "5000000",
-    "defaultRiskProfile": "balanced",
     "defaultExchangeRate": "1350",
     "cacheTTLSeconds": "300",
 }
@@ -72,10 +70,9 @@ def update_watchlist_analysis(session: Session, ticker: str, analysis: dict) -> 
     session.commit()
 
 
-def save_snapshot(session: Session, analysis: dict, capital_krw: float) -> AnalysisSnapshot:
+def save_snapshot(session: Session, analysis: dict) -> AnalysisSnapshot:
     snapshot = AnalysisSnapshot(
         ticker=analysis.get("ticker"),
-        capital_krw=capital_krw,
         decision_status=analysis.get("decision", {}).get("status"),
         decision_label=analysis.get("decision", {}).get("label"),
         risk_score=analysis.get("risk", {}).get("score") or 0,

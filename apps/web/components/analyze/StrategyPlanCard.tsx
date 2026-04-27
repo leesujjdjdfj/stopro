@@ -5,7 +5,7 @@ import type { AnalysisResponse } from "@/types/analysis";
 export function StrategyPlanCard({ analysis }: { analysis: AnalysisResponse }) {
   const s = analysis.strategy;
   return (
-    <Card title="매매 계획">
+    <Card title="가격 기준 전략">
       <p className="mb-4 rounded-[8px] bg-cardSoft p-3 text-sm font-semibold leading-6 text-text">{s.message}</p>
       <div className="grid grid-cols-2 gap-3">
         <Metric label="진입 기준가" value={formatPrice(s.entryPrice, analysis.currency)} />

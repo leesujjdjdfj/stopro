@@ -7,7 +7,6 @@ import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LoadingSkeleton } from "@/components/common/LoadingSkeleton";
-import { RISK_PROFILES } from "@/lib/constants";
 import { api } from "@/lib/api";
 
 export default function SettingsPage() {
@@ -45,16 +44,6 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <Card title="기본 설정">
         <div className="space-y-3">
-          <Field label="기본 투자금">
-            <input value={settings.defaultCapitalKRW ?? ""} onChange={(e) => setSettings({ ...settings, defaultCapitalKRW: e.target.value })} type="number" className="min-h-11 w-full rounded-[8px] bg-cardSoft px-3 font-bold outline-none" />
-          </Field>
-          <Field label="기본 리스크 성향">
-            <select value={settings.defaultRiskProfile ?? "balanced"} onChange={(e) => setSettings({ ...settings, defaultRiskProfile: e.target.value })} className="min-h-11 w-full rounded-[8px] bg-cardSoft px-3 font-bold outline-none">
-              {RISK_PROFILES.map((item) => (
-                <option key={item.value} value={item.value}>{item.label} · {item.description}</option>
-              ))}
-            </select>
-          </Field>
           <Field label="기본 환율 fallback">
             <input value={settings.defaultExchangeRate ?? ""} onChange={(e) => setSettings({ ...settings, defaultExchangeRate: e.target.value })} type="number" className="min-h-11 w-full rounded-[8px] bg-cardSoft px-3 font-bold outline-none" />
           </Field>

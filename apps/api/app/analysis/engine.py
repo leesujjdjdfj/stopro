@@ -7,11 +7,10 @@ from app.analysis.quality import check_data_quality
 from app.analysis.risk import calculate_risk
 from app.analysis.scenario import build_scenarios
 from app.analysis.strategy import (
-    calculate_position_sizing,
-    calculate_profit_loss,
     calculate_reward_risk,
     build_strategy,
 )
+from app.analysis.support_resistance import calculate_support_resistance
 from app.analysis.summary import make_decision, make_rule_based_summary
 from app.core.utils import DISCLAIMER, clean_json, normalize_ticker, safe_float, safe_int
 from app.data.providers.kis_provider import KisProvider
@@ -23,7 +22,7 @@ class AnalysisEngine:
         self.provider = provider or YFinanceProvider()
         self.kis_provider = kis_provider or KisProvider()
 
-    def analyze(self, ticker: str, capital_krw: float, risk_profile: str = "balanced") -> dict:
+    def analyze(self, ticker: str) -> dict:
         normalized = normalize_ticker(ticker)
         history, history_cache_hit, source = self._get_best_history(normalized, "2y")
         history_with_indicators = add_indicators(history)
@@ -57,12 +56,11 @@ class AnalysisEngine:
         risk = calculate_risk(current_price, previous_close, indicators, reward_risk)
         decision = make_decision(current_price, indicators, risk, reward_risk, quality)
         summary = make_rule_based_summary(decision, current_price, indicators, reward_risk, quality)
-        position_sizing = calculate_position_sizing(capital_krw, risk_profile, strategy, price_exchange_rate)
-        profit_loss = calculate_profit_loss(strategy, position_sizing.get("quantity") or 0, price_exchange_rate)
         scenarios = build_scenarios(current_price, previous_close, indicators, strategy, risk, reward_risk)
         fundamentals = interpret_fundamentals(fundamentals_raw)
         backtest = run_backtest(history_with_indicators)
         chart = self._build_chart(history_with_indicators)
+        support_resistance = calculate_support_resistance(history_with_indicators, current_price, normalized)
 
         display_ticker = quote.get("displayTicker") or quote.get("ticker") or normalized
         response_ticker = quote.get("ticker") or display_ticker
@@ -96,14 +94,13 @@ class AnalysisEngine:
             },
             "indicators": indicators,
             "strategy": strategy,
-            "positionSizing": position_sizing,
-            "profitLoss": profit_loss,
             "rewardRisk": reward_risk,
             "risk": risk,
             "scenarios": scenarios,
             "fundamentals": fundamentals,
             "backtest": backtest,
             "dataQuality": quality,
+            "supportResistance": support_resistance,
             "chart": chart,
             "disclaimer": DISCLAIMER,
         }

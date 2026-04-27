@@ -6,10 +6,8 @@ import type { AnalysisResponse } from "@/types/analysis";
 
 interface AnalysisState {
   lastTicker: string;
-  lastCapitalKRW: number;
-  lastRiskProfile: string;
   lastAnalysis?: AnalysisResponse;
-  setLastInput: (ticker: string, capital: number, riskProfile: string) => void;
+  setLastInput: (ticker: string) => void;
   setLastAnalysis: (analysis: AnalysisResponse) => void;
 }
 
@@ -17,10 +15,8 @@ export const useAnalysisStore = create<AnalysisState>()(
   persist(
     (set) => ({
       lastTicker: "NVDA",
-      lastCapitalKRW: 5_000_000,
-      lastRiskProfile: "balanced",
-      setLastInput: (lastTicker, lastCapitalKRW, lastRiskProfile) =>
-        set({ lastTicker, lastCapitalKRW, lastRiskProfile }),
+      setLastInput: (lastTicker) =>
+        set({ lastTicker }),
       setLastAnalysis: (lastAnalysis) =>
         set({
           lastAnalysis,

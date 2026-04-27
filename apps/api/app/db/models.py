@@ -47,7 +47,7 @@ class Alert(SQLModel, table=True):
 class AnalysisSnapshot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     ticker: str = Field(index=True)
-    capital_krw: float
+    capital_krw: float = 0
     decision_status: str
     decision_label: str
     risk_score: int

@@ -9,7 +9,7 @@ from app.core.utils import normalize_ticker
 from app.data.symbol_search import lookup_symbol
 from app.db.database import get_session
 from app.db.models import Watchlist
-from app.db.repository import add_watchlist, get_settings_dict, save_snapshot, update_watchlist_analysis
+from app.db.repository import add_watchlist, save_snapshot, update_watchlist_analysis
 from app.schemas.watchlist import WatchlistCreate
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
@@ -39,16 +39,13 @@ def delete_watchlist(ticker: str, session: Session = Depends(get_session)) -> di
 
 @router.post("/analyze-all")
 def analyze_all(session: Session = Depends(get_session)) -> dict:
-    settings = get_settings_dict(session)
-    capital = float(settings.get("defaultCapitalKRW", 5_000_000))
-    risk_profile = settings.get("defaultRiskProfile", "balanced")
     items = session.exec(select(Watchlist).order_by(Watchlist.created_at.desc())).all()
     results = []
     errors = []
     for item in items:
         try:
-            result = engine.analyze(item.ticker, capital, risk_profile)
-            save_snapshot(session, result, capital)
+            result = engine.analyze(item.ticker)
+            save_snapshot(session, result)
             update_watchlist_analysis(session, item.ticker, result)
             results.append(result)
         except StockDataError as exc:

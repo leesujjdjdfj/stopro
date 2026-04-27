@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-import math
-
 from app.core.utils import safe_float
-
-
-RISK_PROFILE_MAP = {
-    "conservative": 1.0,
-    "balanced": 1.5,
-    "aggressive": 2.0,
-}
 
 
 def build_strategy(close: float, indicators: dict) -> dict:
@@ -115,79 +106,4 @@ def calculate_reward_risk(strategy: dict) -> dict:
         "ratioToSecondTarget": safe_float(ratio2, 2),
         "label": label,
         "description": description,
-    }
-
-
-def calculate_position_sizing(
-    capital_krw: float,
-    risk_profile: str,
-    strategy: dict,
-    exchange_rate: float,
-) -> dict:
-    risk_percent = RISK_PROFILE_MAP.get(risk_profile, RISK_PROFILE_MAP["balanced"])
-    entry = strategy.get("entryPrice") or 0
-    stop = strategy.get("stopLoss") or 0
-    risk_amount = capital_krw * (risk_percent / 100)
-    risk_per_share = max(entry - stop, 0)
-    risk_per_share_krw = risk_per_share * exchange_rate
-    price_krw = entry * exchange_rate
-
-    if risk_per_share_krw <= 0 or price_krw <= 0:
-        return {
-            "capitalKRW": round(capital_krw),
-            "riskPercent": risk_percent,
-            "riskAmountKRW": round(risk_amount),
-            "riskPerShareKRW": None,
-            "quantity": 0,
-            "referenceQuantity": 0,
-            "estimatedCapitalKRW": 0,
-            "remainingCashKRW": round(capital_krw),
-            "warning": "손절 기준이 충분하지 않아 수량 계산이 어렵습니다.",
-        }
-
-    risk_based_quantity = math.floor(risk_amount / risk_per_share_krw)
-    capital_based_quantity = math.floor(capital_krw / price_krw)
-    quantity = max(0, min(risk_based_quantity, capital_based_quantity))
-    reference_quantity = max(1, min(max(1, risk_based_quantity), max(1, capital_based_quantity))) if capital_based_quantity > 0 else 0
-    estimated = quantity * price_krw
-    warning = None
-    if quantity == 0:
-        warning = "입력한 투자금과 리스크 기준으로는 1주 매수도 부담이 클 수 있습니다. 최소 1주 기준 참고값만 확인하세요."
-    elif risk_based_quantity < capital_based_quantity:
-        warning = "리스크 기준 수량이 투자금 기준보다 작아 일부 현금이 남습니다."
-    elif quantity * risk_per_share_krw > risk_amount * 1.05:
-        warning = "손절 시 예상 손실이 설정한 리스크 한도를 넘을 수 있습니다."
-
-    return {
-        "capitalKRW": round(capital_krw),
-        "riskPercent": risk_percent,
-        "riskAmountKRW": round(risk_amount),
-        "riskPerShareKRW": round(risk_per_share_krw),
-        "quantity": quantity,
-        "referenceQuantity": reference_quantity,
-        "estimatedCapitalKRW": round(estimated),
-        "remainingCashKRW": round(capital_krw - estimated),
-        "warning": warning,
-    }
-
-
-def calculate_profit_loss(strategy: dict, quantity: int, exchange_rate: float) -> dict:
-    entry = strategy.get("entryPrice") or 0
-    first = strategy.get("firstTarget") or 0
-    second = strategy.get("secondTarget") or 0
-    stop = strategy.get("stopLoss") or 0
-    q = max(quantity, 0)
-    invested = entry * exchange_rate * q
-
-    first_profit = (first - entry) * exchange_rate * q
-    second_profit = (second - entry) * exchange_rate * q
-    stop_loss = (stop - entry) * exchange_rate * q
-
-    return {
-        "firstTargetProfitKRW": round(first_profit),
-        "secondTargetProfitKRW": round(second_profit),
-        "stopLossLossKRW": round(stop_loss),
-        "firstTargetReturnPercent": safe_float((first_profit / invested) * 100 if invested else 0, 2),
-        "secondTargetReturnPercent": safe_float((second_profit / invested) * 100 if invested else 0, 2),
-        "stopLossReturnPercent": safe_float((stop_loss / invested) * 100 if invested else 0, 2),
     }

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.errors import StockDataError
 from app.db.database import init_db
-from app.routers import alerts, analysis, dashboard, health, memos, positions, search, settings, stocks, watchlist
+from app.routers import alerts, analysis, dashboard, health, memos, news_analysis, positions, search, settings, stocks, watchlist
 
 
 app = FastAPI(
@@ -42,5 +42,6 @@ app.include_router(watchlist.router)
 app.include_router(positions.router)
 app.include_router(alerts.router)
 app.include_router(memos.router)
+app.include_router(news_analysis.router)
 app.include_router(search.router)
 app.include_router(settings.router)

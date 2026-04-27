@@ -7,27 +7,6 @@ export function formatKRW(value?: number | null) {
   }).format(value);
 }
 
-export function formatKRWInput(value: number | string) {
-  const parsed = typeof value === "number" ? value : parseNumberInput(value);
-  if (!parsed || Number.isNaN(parsed)) return "";
-  return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format(parsed);
-}
-
-export function parseNumberInput(value: string) {
-  const text = value.trim();
-  if (!text) return 0;
-  const normalized = text.replace(/,/g, "");
-  const decimalMatch = normalized.match(/\d+(\.\d+)?/);
-  if ((normalized.includes("억") || normalized.toLowerCase().includes("eok")) && decimalMatch) {
-    return Math.round(Number(decimalMatch[0]) * 100_000_000);
-  }
-  if ((normalized.includes("만") || normalized.toLowerCase().includes("man")) && decimalMatch) {
-    return Math.round(Number(decimalMatch[0]) * 10_000);
-  }
-  const digits = normalized.replace(/[^\d]/g, "");
-  return digits ? Number(digits) : 0;
-}
-
 export function formatPrice(value?: number | null, currency = "USD") {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   if (currency === "KRW") return formatKRW(value);

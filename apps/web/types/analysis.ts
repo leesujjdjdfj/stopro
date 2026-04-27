@@ -79,25 +79,6 @@ export interface AnalysisResponse {
   };
   indicators: Indicators;
   strategy: StrategyPlan;
-  positionSizing: {
-    capitalKRW: number;
-    riskPercent: number;
-    riskAmountKRW: number;
-    riskPerShareKRW?: number | null;
-    quantity: number;
-    referenceQuantity?: number;
-    estimatedCapitalKRW: number;
-    remainingCashKRW: number;
-    warning?: string | null;
-  };
-  profitLoss: {
-    firstTargetProfitKRW: number;
-    secondTargetProfitKRW: number;
-    stopLossLossKRW: number;
-    firstTargetReturnPercent: number;
-    secondTargetReturnPercent: number;
-    stopLossReturnPercent: number;
-  };
   rewardRisk: {
     ratioToFirstTarget?: number | null;
     ratioToSecondTarget?: number | null;
@@ -152,8 +133,24 @@ export interface AnalysisResponse {
     isRealtime: boolean;
     message: string;
   };
+  supportResistance?: {
+    support?: SupportResistanceLevel | null;
+    resistance?: SupportResistanceLevel | null;
+    atr?: number | null;
+    tolerance?: number | null;
+    method?: string;
+    lookbackDays?: number;
+  };
   chart: ChartPoint[];
   disclaimer: string;
+}
+
+export interface SupportResistanceLevel {
+  price: number;
+  strength: "weak" | "normal" | "strong";
+  touchCount: number;
+  distancePercent: number;
+  score?: number | null;
 }
 
 export interface ChartPoint {
@@ -224,4 +221,34 @@ export interface SymbolSearchResult {
   market: string;
   exchange: string;
   currency: string;
+}
+
+export interface NewsArticle {
+  title: string;
+  description?: string | null;
+  url: string;
+  source?: string | null;
+  publishedAt?: string | null;
+}
+
+export type NewsSentiment = "positive" | "neutral" | "negative" | "mixed";
+
+export interface NewsAnalysisResponse {
+  ticker: string;
+  companyName: string;
+  newsSource: string;
+  aiProvider: string;
+  sentiment: NewsSentiment;
+  sentimentScore: number;
+  oneLine: string;
+  summary: string;
+  keyIssues: string[];
+  positiveFactors: string[];
+  negativeFactors: string[];
+  riskFactors: string[];
+  watchPoints: string[];
+  newsItems: NewsArticle[];
+  confidence: "high" | "medium" | "low";
+  cacheHit: boolean;
+  disclaimer: string;
 }

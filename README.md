@@ -1,6 +1,6 @@
 # StoPro
 
-StoPro는 개인 투자자가 매일 관심종목을 점검하고, 보유 종목의 위험 구간을 관리하기 위한 개인용 주식 분석 웹앱입니다. 화면만 있는 데모가 아니라 FastAPI 백엔드에서 `yfinance`와 한국투자증권 Open API 데이터를 조회하고, 기술적 지표, 손익비, 포지션 사이징, 백테스트 요약을 계산합니다.
+StoPro는 개인 투자자가 매일 관심종목을 점검하고, 보유 종목의 위험 구간을 관리하기 위한 개인용 주식 분석 웹앱입니다. 화면만 있는 데모가 아니라 FastAPI 백엔드에서 `yfinance`와 한국투자증권 Open API 데이터를 조회하고, 기술적 지표, 손익비, 지지/저항, 백테스트 요약, 뉴스 기반 AI 분석을 계산합니다.
 
 > 본 분석은 개인 참고용이며, 투자 판단과 책임은 사용자 본인에게 있습니다.
 
@@ -16,6 +16,7 @@ StoPro는 개인 투자자가 매일 관심종목을 점검하고, 보유 종목
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, Recharts, Lucide React, Zustand, LocalStorage
 - Backend: FastAPI, pandas, numpy, yfinance, SQLModel, SQLite
 - Data: 한국 주식 현재가/일봉은 KIS Open API 우선, 해외 주식은 yfinance, USD/KRW는 `KRW=X` 우선 조회 후 `.env` fallback
+- News/AI: GNews 또는 NewsAPI로 최근 뉴스를 수집하고, Groq 또는 OpenRouter로 투자 참고용 요약을 생성합니다. 키가 없거나 실패하면 rule-based fallback을 사용합니다.
 
 ## 주요 기능
 
@@ -23,12 +24,12 @@ StoPro는 개인 투자자가 매일 관심종목을 점검하고, 보유 종목
 - RSI, MACD, Stochastic, MA20/60/200, ATR, Bollinger Band, Volume Ratio 계산
 - 매수 후보, 분할 접근, 관망, 주의, 회피 판단
 - 진입가, 목표가, 손절가, 무효화 조건 계산
-- 투자금과 리스크 성향 기준 권장 수량 계산
-- 목표/손절 손익 시뮬레이션과 R:R 계산
+- 가격 기준 진입가, 목표가, 손절가와 R:R 계산
 - 리스크 점수와 위험 요인 분해
 - 관심종목, 보유종목, 가격 알림, 투자 메모 저장
 - 분석 스냅샷 저장
 - 최근 2년 규칙 기반 백테스트 요약
+- 최근 뉴스와 공시성 이슈 기반 AI 요약
 - 데이터 품질과 캐시 여부 표시
 
 ## 프로젝트 구조
@@ -57,9 +58,27 @@ KIS_APP_SECRET=
 KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 KIS_WS_URL=ws://ops.koreainvestment.com:31000
 KIS_QUOTE_CACHE_TTL_SECONDS=5
+
+GNEWS_API_KEY=
+NEWS_API_KEY=
+NEWS_PROVIDER=gnews
+
+GROQ_API_KEY=
+OPENROUTER_API_KEY=
+AI_PROVIDER=groq
+AI_MODEL=llama-3.1-8b-instant
 ```
 
 실전투자 도메인을 사용할 경우 `KIS_BASE_URL=https://openapi.koreainvestment.com:9443`로 설정합니다. KIS 토큰은 1분당 1회 발급 제한이 있어 `.kis_token_cache.json`에 로컬 캐시되며, 이 파일은 git에 포함하지 않습니다.
+
+뉴스/AI 분석 키 발급:
+
+- GNews: `https://gnews.io/`에서 API Key를 발급한 뒤 `GNEWS_API_KEY`에 입력합니다.
+- NewsAPI: `https://newsapi.org/`에서 API Key를 발급한 뒤 `NEWS_API_KEY`에 입력합니다.
+- Groq: `https://console.groq.com/keys`에서 API Key를 발급한 뒤 `GROQ_API_KEY`에 입력합니다.
+- OpenRouter: `https://openrouter.ai/keys`에서 API Key를 발급한 뒤 `OPENROUTER_API_KEY`에 입력합니다.
+
+API Key는 반드시 `apps/api/.env`에만 저장합니다. `NEXT_PUBLIC_` 접두사를 붙이지 말고 프론트 환경변수로 노출하지 않습니다.
 
 `apps/web/.env.local`
 
@@ -127,6 +146,8 @@ npm run start -- --hostname 127.0.0.1 --port 3000
 - `GET /api/stocks/{ticker}/quote`
 - `GET /api/stocks/{ticker}/history?period=1y`
 - `POST /api/analyze`
+- `GET /api/news/{ticker}`
+- `POST /api/news-analysis`
 - `GET /api/dashboard`
 - `GET /api/watchlist`
 - `POST /api/watchlist`
@@ -148,7 +169,7 @@ npm run start -- --hostname 127.0.0.1 --port 3000
 
 ## 무료 데이터 한계
 
-KIS Open API와 `yfinance` 모두 무료/개인용 데이터 사용 조건, 호출 제한, 누락, 정정 가능성이 있습니다. 일부 종목은 기본적 지표가 비어 있을 수 있고, 국내 종목의 기본적 지표는 현재 보조 데이터가 부족할 수 있습니다. StoPro는 모든 분석 결과에 데이터 품질과 캐시 사용 여부를 함께 제공합니다.
+KIS Open API, `yfinance`, GNews, NewsAPI, Groq, OpenRouter 모두 무료/개인용 데이터 사용 조건, 호출 제한, 누락, 정정 가능성이 있습니다. 일부 종목은 기본적 지표가 비어 있을 수 있고, 국내 종목의 기본적 지표는 현재 보조 데이터가 부족할 수 있습니다. 뉴스 기반 AI 분석은 기사 제목과 요약을 기반으로 만든 참고용 해석이며, 원문 기사와 공시를 함께 확인해야 합니다. StoPro는 모든 분석 결과에 데이터 품질과 캐시 사용 여부를 함께 제공합니다.
 
 ## 향후 개선 가능 기능
 

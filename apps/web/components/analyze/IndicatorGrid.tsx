@@ -4,10 +4,12 @@ import type { AnalysisResponse } from "@/types/analysis";
 
 export function IndicatorGrid({ analysis }: { analysis: AnalysisResponse }) {
   const i = analysis.indicators;
+  const ma5 = calculateMovingAverage(analysis.chart, 5);
   const items = [
     { label: "RSI", value: formatNumber(i.rsi, 1), note: rsiNote(i.rsi) },
     { label: "MACD", value: formatNumber(i.macd, 3), note: i.macd && i.macdSignal && i.macd > i.macdSignal ? "강세 전환" : "확인 필요" },
     { label: "Stochastic", value: `${formatNumber(i.stochasticK, 1)} / ${formatNumber(i.stochasticD, 1)}`, note: (i.stochasticK ?? 0) > 85 ? "과열권" : "보통" },
+    { label: "MA5", value: formatPrice(ma5, analysis.currency), note: ma5 == null ? "부족" : analysis.currentPrice > ma5 ? "단기선 위" : "단기선 아래" },
     { label: "MA20", value: formatPrice(i.ma20, analysis.currency), note: analysis.currentPrice > (i.ma20 ?? Infinity) ? "위에 있음" : "아래에 있음" },
     { label: "MA60", value: formatPrice(i.ma60, analysis.currency), note: analysis.currentPrice > (i.ma60 ?? Infinity) ? "위에 있음" : "확인 필요" },
     { label: "MA200", value: formatPrice(i.ma200, analysis.currency), note: analysis.currentPrice > (i.ma200 ?? Infinity) ? "장기 추세 위" : "장기 추세 아래" },
@@ -32,6 +34,15 @@ export function IndicatorGrid({ analysis }: { analysis: AnalysisResponse }) {
       </div>
     </Card>
   );
+}
+
+function calculateMovingAverage(chart: AnalysisResponse["chart"], days: number) {
+  const closes = chart
+    .map((point) => point.close)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .slice(-days);
+  if (closes.length < days) return null;
+  return closes.reduce((sum, value) => sum + value, 0) / closes.length;
 }
 
 function rsiNote(value?: number | null) {
