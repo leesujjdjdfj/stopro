@@ -51,7 +51,7 @@ export default function DashboardPage() {
       <DisclaimerBanner />
       <section className="rounded-[8px] bg-text p-5 text-white">
         <p className="text-sm font-semibold text-white/70">StoPro</p>
-        <h1 className="mt-2 text-2xl font-black">이성현</h1>
+        <h1 className="mt-2 text-2xl font-black">오늘 확인할 종목</h1>
         <p className="mt-2 text-sm leading-6 text-white/75">관심종목, 리스크 알림, 최근 분석을 실제 데이터 기준으로 점검합니다.</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <Link href="/analyze" className="inline-flex min-h-11 items-center justify-center gap-1 rounded-[8px] bg-white text-xs font-black text-text">
