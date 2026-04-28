@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -14,17 +11,18 @@ from app.core.cache import cache
 from app.core.config import get_settings
 from app.core.errors import StockDataError
 from app.core.utils import normalize_ticker, now_iso, safe_float, safe_int
+from app.data.providers.kis_token_manager import clean_kis_env_value, kis_token_manager
 from app.data.symbol_search import lookup_symbol
 
 
 class KisProvider:
-    source = "KIS"
+    source = "KIS_REST"
 
     def __init__(self) -> None:
         self.settings = get_settings()
 
     def is_enabled(self) -> bool:
-        return bool(self.settings.kis_enabled and self.settings.kis_app_key and self.settings.kis_app_secret and self.settings.kis_base_url)
+        return kis_token_manager.is_configured()
 
     def supports(self, ticker: str) -> bool:
         normalized = normalize_ticker(ticker)
@@ -39,30 +37,16 @@ class KisProvider:
         if hit:
             return {**cached, "cacheHit": True}
 
-        token = self._get_access_token()
-        session = self._session()
-        url = f"{self.settings.kis_base_url}/uapi/domestic-stock/v1/quotations/inquire-price"
-        headers = {
-            "content-type": "application/json",
-            "authorization": f"Bearer {token}",
-            "appkey": self.settings.kis_app_key or "",
-            "appsecret": self.settings.kis_app_secret or "",
-            "tr_id": "FHKST01010100",
-            "custtype": "P",
-        }
         params = {
             "FID_COND_MRKT_DIV_CODE": "J",
             "FID_INPUT_ISCD": code,
         }
-        try:
-            response = session.get(url, headers=headers, params=params, timeout=8)
-            data = response.json()
-        except Exception as exc:
-            raise StockDataError(f"KIS 현재가 조회에 실패했습니다: {exc}", 502) from exc
-
-        if response.status_code != 200 or data.get("rt_cd") != "0":
-            message = data.get("msg1") or "KIS 현재가 조회에 실패했습니다."
-            raise StockDataError(message, 502)
+        data = self._request_kis_json(
+            path="/uapi/domestic-stock/v1/quotations/inquire-price",
+            tr_id="FHKST01010100",
+            params=params,
+            error_message="KIS 현재가 조회에 실패했습니다.",
+        )
 
         output = data.get("output") or {}
         current_price = self._to_float(output.get("stck_prpr"))
@@ -112,7 +96,6 @@ class KisProvider:
         days = {"1m": 45, "3m": 120, "6m": 220, "1y": 420, "2y": 780, "5y": 1900}.get(period.lower(), 780)
         start = datetime.now() - timedelta(days=days)
         end = datetime.now()
-        token = self._get_access_token()
         rows: list[dict] = []
         seen_dates: set[str] = set()
 
@@ -121,7 +104,7 @@ class KisProvider:
             if page > 0:
                 time.sleep(0.65)
             try:
-                batch = self._request_daily_chart(code, token, start, end)
+                batch = self._request_daily_chart(code, start, end)
             except StockDataError as exc:
                 if self._is_rate_limited(exc.message):
                     cache.set(f"kis:history:block:{code}", True, 10)
@@ -167,49 +150,7 @@ class KisProvider:
         cache.set(key, frame, self.settings.cache_ttl_seconds)
         return frame.copy(), False, self.source
 
-    def _get_access_token(self) -> str:
-        cached, hit = cache.get("kis:access_token")
-        if hit and cached:
-            return str(cached)
-        file_token = self._read_token_file()
-        if file_token:
-            return file_token
-
-        session = self._session()
-        url = f"{self.settings.kis_base_url}/oauth2/tokenP"
-        headers = {"content-type": "application/json"}
-        body = {
-            "grant_type": "client_credentials",
-            "appkey": self.settings.kis_app_key,
-            "appsecret": self.settings.kis_app_secret,
-        }
-        try:
-            response = session.post(url, headers=headers, json=body, timeout=8)
-            data = response.json()
-        except Exception as exc:
-            raise StockDataError(f"KIS 토큰 발급에 실패했습니다: {exc}", 502) from exc
-
-        if response.status_code != 200 or "access_token" not in data:
-            message = data.get("msg1") or "KIS 토큰 발급에 실패했습니다."
-            raise StockDataError(message, 502)
-
-        token = data["access_token"]
-        ttl = max(60, int(data.get("expires_in") or 86400) - 60)
-        cache.set("kis:access_token", token, ttl)
-        self._write_token_file(token, ttl)
-        return token
-
-    def _request_daily_chart(self, code: str, token: str, start: datetime, end: datetime) -> list[dict]:
-        session = self._session()
-        url = f"{self.settings.kis_base_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
-        headers = {
-            "content-type": "application/json",
-            "authorization": f"Bearer {token}",
-            "appkey": self.settings.kis_app_key or "",
-            "appsecret": self.settings.kis_app_secret or "",
-            "tr_id": "FHKST03010100",
-            "custtype": "P",
-        }
+    def _request_daily_chart(self, code: str, start: datetime, end: datetime) -> list[dict]:
         params = {
             "FID_COND_MRKT_DIV_CODE": "J",
             "FID_INPUT_ISCD": code,
@@ -218,15 +159,47 @@ class KisProvider:
             "FID_PERIOD_DIV_CODE": "D",
             "FID_ORG_ADJ_PRC": "0",
         }
-        try:
-            response = session.get(url, headers=headers, params=params, timeout=8)
-            data = response.json()
-        except Exception as exc:
-            raise StockDataError(f"KIS 일봉 조회에 실패했습니다: {exc}", 502) from exc
-        if response.status_code != 200 or data.get("rt_cd") != "0":
-            message = data.get("msg1") or "KIS 일봉 조회에 실패했습니다."
-            raise StockDataError(message, 502)
+        data = self._request_kis_json(
+            path="/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+            tr_id="FHKST03010100",
+            params=params,
+            error_message="KIS 일봉 조회에 실패했습니다.",
+        )
         return data.get("output2") or []
+
+    def _request_kis_json(self, path: str, tr_id: str, params: dict, error_message: str) -> dict:
+        url = f"{self.settings.kis_base_url}{path}"
+        last_message = error_message
+        for attempt in range(2):
+            token = kis_token_manager.get_token()
+            headers = {
+                "content-type": "application/json",
+                "authorization": f"Bearer {token}",
+                "appkey": clean_kis_env_value(self.settings.kis_app_key),
+                "appsecret": clean_kis_env_value(self.settings.kis_app_secret),
+                "tr_id": tr_id,
+                "custtype": "P",
+            }
+            try:
+                response = self._session().get(url, headers=headers, params=params, timeout=8)
+                try:
+                    data = response.json()
+                except ValueError:
+                    data = {}
+            except Exception as exc:
+                raise StockDataError(error_message, 502) from exc
+
+            if self._is_token_error(response.status_code, data) and attempt == 0:
+                kis_token_manager.invalidate_token()
+                continue
+
+            if response.status_code == 200 and data.get("rt_cd") == "0":
+                return data
+
+            last_message = str(data.get("msg1") or error_message)
+            break
+
+        raise StockDataError(last_message, 502)
 
     def _session(self) -> requests.Session:
         session = requests.Session()
@@ -251,35 +224,8 @@ class KisProvider:
     def _is_rate_limited(self, message: str) -> bool:
         return any(keyword in message for keyword in ("초당 거래건수", "호출 제한", "rate", "Rate"))
 
-    def _token_cache_path(self) -> Path:
-        return Path.cwd() / ".kis_token_cache.json"
-
-    def _token_fingerprint(self) -> str:
-        source = f"{self.settings.kis_base_url}:{self.settings.kis_app_key or ''}"
-        return hashlib.sha256(source.encode("utf-8")).hexdigest()
-
-    def _read_token_file(self) -> Optional[str]:
-        path = self._token_cache_path()
-        if not path.exists():
-            return None
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            return None
-        token = payload.get("access_token")
-        expires_at = float(payload.get("expires_at") or 0)
-        if not token or payload.get("fingerprint") != self._token_fingerprint() or expires_at <= time.time() + 60:
-            return None
-        cache.set("kis:access_token", token, max(60, int(expires_at - time.time())))
-        return str(token)
-
-    def _write_token_file(self, token: str, ttl: int) -> None:
-        payload = {
-            "access_token": token,
-            "expires_at": time.time() + ttl,
-            "fingerprint": self._token_fingerprint(),
-        }
-        try:
-            self._token_cache_path().write_text(json.dumps(payload), encoding="utf-8")
-        except Exception:
-            pass
+    def _is_token_error(self, status_code: int, data: dict) -> bool:
+        if status_code == 401:
+            return True
+        message = str(data.get("msg1") or data.get("msg_cd") or "").lower()
+        return "token" in message and any(keyword in message for keyword in ("만료", "expire", "invalid", "인증", "unauthorized"))

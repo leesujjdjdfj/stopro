@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.analysis.backtest import run_backtest
 from app.analysis.fundamentals import interpret_fundamentals
 from app.analysis.indicators import add_indicators, latest_indicators
+from app.analysis.investment_insight import build_investment_insight, build_technical_context
 from app.analysis.quality import check_data_quality
 from app.analysis.risk import calculate_risk
 from app.analysis.scenario import build_scenarios
@@ -12,6 +13,7 @@ from app.analysis.strategy import (
 )
 from app.analysis.support_resistance import calculate_support_resistance
 from app.analysis.summary import make_decision, make_rule_based_summary
+from app.ai.market_news_analyzer import MarketNewsAnalyzer
 from app.core.utils import DISCLAIMER, clean_json, normalize_ticker, safe_float, safe_int
 from app.data.providers.kis_provider import KisProvider
 from app.data.providers.yfinance_provider import YFinanceProvider
@@ -21,6 +23,7 @@ class AnalysisEngine:
     def __init__(self, provider: YFinanceProvider | None = None, kis_provider: KisProvider | None = None) -> None:
         self.provider = provider or YFinanceProvider()
         self.kis_provider = kis_provider or KisProvider()
+        self.market_news_analyzer = MarketNewsAnalyzer()
 
     def analyze(self, ticker: str) -> dict:
         normalized = normalize_ticker(ticker)
@@ -66,6 +69,37 @@ class AnalysisEngine:
         response_ticker = quote.get("ticker") or display_ticker
         market = quote.get("market") or quote.get("exchange")
         exchange = quote.get("exchange") or market
+        technical_context = build_technical_context(
+            current_price=current_price,
+            daily_change_percent=quote.get("dailyChangePercent"),
+            indicators=indicators,
+            reward_risk=reward_risk,
+            risk=risk,
+            support_resistance=support_resistance,
+        )
+        news_analysis = self._get_news_analysis(
+            display_ticker=display_ticker,
+            company_name=quote.get("name") or display_ticker,
+            current_price=current_price,
+            daily_change_percent=quote.get("dailyChangePercent"),
+            technical_context=technical_context,
+        )
+        investment_insight = build_investment_insight(
+            ticker=response_ticker,
+            name=quote.get("name") or display_ticker,
+            currency=currency,
+            frame=history_with_indicators,
+            current_price=current_price,
+            previous_close=previous_close,
+            indicators=indicators,
+            strategy=strategy,
+            reward_risk=reward_risk,
+            risk=risk,
+            quality=quality,
+            support_resistance=support_resistance,
+            quote=quote,
+            news_analysis=news_analysis,
+        )
 
         response = {
             "ticker": response_ticker,
@@ -101,10 +135,32 @@ class AnalysisEngine:
             "backtest": backtest,
             "dataQuality": quality,
             "supportResistance": support_resistance,
+            "investmentInsight": investment_insight,
             "chart": chart,
             "disclaimer": DISCLAIMER,
         }
         return clean_json(response)
+
+    def _get_news_analysis(
+        self,
+        *,
+        display_ticker: str,
+        company_name: str,
+        current_price: float,
+        daily_change_percent: float | None,
+        technical_context: dict,
+    ) -> dict | None:
+        try:
+            return self.market_news_analyzer.analyze(
+                ticker=display_ticker,
+                company_name=company_name,
+                current_price=current_price,
+                daily_change_percent=daily_change_percent,
+                technical_context=technical_context,
+            )
+        except Exception as exc:
+            print(f"investment_news_analysis_failed ticker={display_ticker} error={type(exc).__name__}: {exc}")
+            return None
 
     def _get_best_quote(self, ticker: str) -> dict:
         if self.kis_provider.is_enabled() and self.kis_provider.supports(ticker):

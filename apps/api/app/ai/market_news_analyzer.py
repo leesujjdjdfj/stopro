@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 
 from app.ai.groq_provider import GroqProvider
 from app.ai.openrouter_provider import OpenRouterProvider
@@ -25,11 +26,13 @@ class MarketNewsAnalyzer:
         company_name: str | None = None,
         current_price: float | None = None,
         daily_change_percent: float | None = None,
+        technical_context: dict | None = None,
     ) -> dict:
         display_ticker = normalize_ticker(ticker).replace(".KS", "").replace(".KQ", "")
         today = datetime.now(timezone.utc).date().isoformat()
         provider_key = self.settings.ai_provider.lower()
-        cache_key = f"news-ai:{provider_key}:{self.settings.ai_model}:{display_ticker}:{today}"
+        context_key = self._context_key(technical_context)
+        cache_key = f"news-ai:{provider_key}:{self.settings.ai_model}:{display_ticker}:{today}:{context_key}"
         cached, hit = cache.get(cache_key)
         if hit:
             return {**cached, "cacheHit": True}
@@ -44,7 +47,7 @@ class MarketNewsAnalyzer:
             return result
 
         system_prompt = self._system_prompt()
-        user_prompt = self._user_prompt(company, display_ticker, current_price, daily_change_percent, articles)
+        user_prompt = self._user_prompt(company, display_ticker, current_price, daily_change_percent, articles, technical_context)
         for provider in self._ordered_providers():
             try:
                 ai_result = provider.analyze(system_prompt, user_prompt)
@@ -79,9 +82,10 @@ class MarketNewsAnalyzer:
 
     def _system_prompt(self) -> str:
         return (
-            "너는 개인 투자자를 위한 보수적인 시장 뉴스 분석 보조 도구다. "
-            "제공된 뉴스 제목과 요약만 기반으로 분석한다. 기사에 없는 내용을 추측하지 않는다. "
-            "매수/매도 확정 권유를 하지 않는다. 투자 판단에 도움이 되도록 핵심 이슈, 긍정 요인, "
+            "너는 개인 투자자를 위한 보수적인 시장 분석 보조 도구다. "
+            "제공된 가격 데이터, 차트 요약, 뉴스 제목과 요약에 근거해서만 말한다. "
+            "기사에 없는 내용을 추측하지 않는다. 매수/매도 확정 권유를 하지 않는다. "
+            "리스크를 먼저 설명하고 투자 판단에 도움이 되도록 핵심 이슈, 긍정 요인, "
             "부정 요인, 리스크, 확인할 포인트를 정리한다. 출력은 반드시 JSON으로 한다."
         )
 
@@ -92,6 +96,7 @@ class MarketNewsAnalyzer:
         current_price: float | None,
         daily_change_percent: float | None,
         articles: list[dict],
+        technical_context: dict | None = None,
     ) -> str:
         news_lines = []
         for index, article in enumerate(articles[:10], start=1):
@@ -106,6 +111,7 @@ class MarketNewsAnalyzer:
             f"티커: {ticker}\n"
             f"현재가: {current_price if current_price is not None else '알 수 없음'}\n"
             f"당일 등락률: {daily_change_percent if daily_change_percent is not None else '알 수 없음'}%\n\n"
+            f"차트 요약:\n{json.dumps(technical_context or {}, ensure_ascii=False, default=str)}\n\n"
             "최근 뉴스 목록:\n"
             + "\n".join(news_lines)
             + "\n\nJSON 형식:\n"
@@ -119,6 +125,7 @@ class MarketNewsAnalyzer:
             '  "negativeFactors": ["부정 요인"],\n'
             '  "riskFactors": ["리스크"],\n'
             '  "watchPoints": ["확인할 포인트"],\n'
+            '  "technicalVsNews": "aligned|diverged|mixed|insufficient",\n'
             '  "confidence": "high|medium|low"\n'
             "}"
         )
@@ -142,6 +149,7 @@ class MarketNewsAnalyzer:
             "negativeFactors": self._safe_list(ai_result.get("negativeFactors"), ["뉴스 수가 제한적이면 부정 요인을 과소평가할 수 있습니다."]),
             "riskFactors": self._safe_list(ai_result.get("riskFactors"), ["무료 뉴스 API 기반이라 누락과 지연 가능성이 있습니다."]),
             "watchPoints": self._safe_list(ai_result.get("watchPoints"), ["추가 뉴스와 가격 반응을 함께 확인하세요."]),
+            "technicalVsNews": self._safe_alignment(ai_result.get("technicalVsNews")),
             "newsItems": self._news_items(news.get("articles", [])),
             "confidence": confidence,
             "cacheHit": False,
@@ -173,6 +181,7 @@ class MarketNewsAnalyzer:
             "negativeFactors": self._keyword_negative(articles),
             "riskFactors": ["뉴스 수가 부족하거나 AI API 호출이 실패해 해석 신뢰도가 낮습니다."],
             "watchPoints": ["원문 기사, 공시, 실적 일정, 가격 반응을 함께 확인하세요."],
+            "technicalVsNews": "insufficient" if not articles else "mixed",
             "newsItems": self._news_items(articles),
             "confidence": "low" if len(articles) < 3 else "medium",
             "cacheHit": False,
@@ -224,6 +233,10 @@ class MarketNewsAnalyzer:
         text = str(value or "low").lower()
         return text if text in {"high", "medium", "low"} else "low"
 
+    def _safe_alignment(self, value: object) -> str:
+        text = str(value or "insufficient").lower()
+        return text if text in {"aligned", "diverged", "mixed", "insufficient"} else "insufficient"
+
     def _safe_text(self, value: object, fallback: str) -> str:
         text = str(value or "").strip()
         return text or fallback
@@ -237,3 +250,11 @@ class MarketNewsAnalyzer:
     def _clamp_score(self, value: object) -> int:
         score = safe_float(value, 0) or 0
         return int(max(-100, min(100, round(score))))
+
+    def _context_key(self, technical_context: dict | None) -> str:
+        if not technical_context:
+            return "news-only"
+        close = technical_context.get("currentPrice")
+        rr = technical_context.get("rewardRiskRatio")
+        risk_score = technical_context.get("riskScore")
+        return f"tech:{safe_float(close, 2)}:{safe_float(rr, 2)}:{risk_score}"

@@ -28,6 +28,7 @@ class NewsAnalysisRequest(BaseModel):
     companyName: Optional[str] = None
     currentPrice: Optional[float] = None
     dailyChangePercent: Optional[float] = None
+    technicalContext: Optional[dict] = None
 
 
 class NewsAnalysisResponse(BaseModel):
@@ -44,6 +45,7 @@ class NewsAnalysisResponse(BaseModel):
     negativeFactors: list[str]
     riskFactors: list[str]
     watchPoints: list[str]
+    technicalVsNews: str = "insufficient"
     newsItems: list[NewsArticle]
     confidence: str
     cacheHit: bool = False

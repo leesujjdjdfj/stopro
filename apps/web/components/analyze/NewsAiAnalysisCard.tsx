@@ -22,7 +22,19 @@ export function NewsAiAnalysisCard({ analysis }: { analysis: AnalysisResponse })
         ticker: analysis.displayTicker || analysis.ticker,
         companyName: analysis.name,
         currentPrice: analysis.currentPrice,
-        dailyChangePercent: analysis.dailyChangePercent
+        dailyChangePercent: analysis.dailyChangePercent,
+        technicalContext: {
+          currentPrice: analysis.currentPrice,
+          dailyChangePercent: analysis.dailyChangePercent,
+          ma20: analysis.indicators.ma20,
+          ma60: analysis.indicators.ma60,
+          ma200: analysis.indicators.ma200,
+          rsi: analysis.indicators.rsi,
+          rewardRiskRatio: analysis.rewardRisk.ratioToSecondTarget,
+          riskScore: analysis.risk.score,
+          supportPrice: analysis.supportResistance?.support?.price,
+          resistancePrice: analysis.supportResistance?.resistance?.price
+        }
       })
       .then((result) => {
         if (!alive) return;
@@ -81,7 +93,7 @@ export function NewsAiAnalysisCard({ analysis }: { analysis: AnalysisResponse })
             <div>
               <h2 className="text-base font-black text-text">뉴스 기반 AI 분석</h2>
               <p className="mt-0.5 text-[11px] font-bold text-subText">
-                {data.newsSource} · {data.aiProvider}
+                뉴스 + AI 종합 해석 · {data.newsSource} · {data.aiProvider}
                 {data.cacheHit ? " · 캐시" : ""}
               </p>
             </div>
@@ -97,8 +109,13 @@ export function NewsAiAnalysisCard({ analysis }: { analysis: AnalysisResponse })
       </div>
 
       <p className="mt-4 text-sm leading-6 text-text">{data.summary}</p>
+      {data.technicalVsNews ? (
+        <p className="mt-3 rounded-[8px] bg-cardSoft p-3 text-xs font-bold leading-5 text-subText">
+          차트와 뉴스 방향성: {alignmentLabel(data.technicalVsNews)}
+        </p>
+      ) : null}
 
-      <div className="mt-4 grid grid-cols-1 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-2.5">
         <Section title="핵심 이슈" items={data.keyIssues} />
         <Section title="긍정 요인" items={data.positiveFactors} tone="red" />
         <Section title="부정 요인" items={data.negativeFactors} tone="blue" />
@@ -106,7 +123,7 @@ export function NewsAiAnalysisCard({ analysis }: { analysis: AnalysisResponse })
         <Section title="확인할 포인트" items={data.watchPoints} />
       </div>
 
-      <div className="mt-4 rounded-[8px] border border-border bg-cardSoft p-4">
+      <div className="mt-4 rounded-[8px] border border-border bg-cardSoft p-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Newspaper className="h-4 w-4 text-primary" />
@@ -122,7 +139,7 @@ export function NewsAiAnalysisCard({ analysis }: { analysis: AnalysisResponse })
                 href={item.url}
                 target="_blank"
                 rel="noreferrer"
-                className="block rounded-[8px] bg-white p-3 active:bg-gray-50"
+              className="block rounded-[8px] bg-white p-3 active:bg-gray-50"
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-black leading-5 text-text">{item.title}</p>
@@ -157,7 +174,7 @@ function Section({ title, items, tone = "gray" }: { title: string; items: string
   }[tone];
 
   return (
-    <div className="rounded-[8px] border border-border bg-white p-4">
+    <div className={`rounded-[8px] border p-3 ${tone === "warning" ? "border-warning/20 bg-warning/10" : "border-border bg-white"}`}>
       <h3 className={`text-sm font-black ${titleClass}`}>{title}</h3>
       <ul className="mt-2 space-y-2">
         {(items.length ? items : ["추가 확인이 필요합니다."]).map((item) => (
@@ -197,6 +214,10 @@ function sentimentText(sentiment: NewsSentiment) {
 function confidenceLabel(value: "high" | "medium" | "low") {
   const labels = { high: "높음", medium: "보통", low: "낮음" };
   return labels[value];
+}
+
+function alignmentLabel(value: "aligned" | "diverged" | "mixed" | "insufficient") {
+  return { aligned: "일치", diverged: "엇갈림", mixed: "혼재", insufficient: "판단 부족" }[value];
 }
 
 function signedScore(value: number) {

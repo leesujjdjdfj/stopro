@@ -23,4 +23,5 @@ def analyze_news(payload: NewsAnalysisRequest) -> dict:
         company_name=payload.companyName,
         current_price=payload.currentPrice,
         daily_change_percent=payload.dailyChangePercent,
+        technical_context=payload.technicalContext,
     )

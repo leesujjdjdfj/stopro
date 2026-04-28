@@ -141,7 +141,84 @@ export interface AnalysisResponse {
     method?: string;
     lookbackDays?: number;
   };
+  investmentInsight?: InvestmentInsight;
   chart: ChartPoint[];
+  disclaimer: string;
+}
+
+export interface InsightDetail {
+  condition: string;
+  passed: boolean;
+  value: string;
+  impact: string;
+}
+
+export interface InsightBreakdown {
+  key: string;
+  name: string;
+  score: number;
+  maxScore: number;
+  label: string;
+  summary: string;
+  details?: InsightDetail[];
+}
+
+export interface InvestmentInsight {
+  finalLabel: string;
+  score: number;
+  tone: "positive" | "cautious" | "neutral" | "warning" | "danger";
+  oneLine: string;
+  summary: string;
+  technicalScore: number;
+  newsScore: number;
+  totalScore: number;
+  confidence: "high" | "medium" | "low";
+  scoreBreakdown: InsightBreakdown[];
+  positivePoints: string[];
+  negativePoints: string[];
+  watchPoints: string[];
+  riskManagement: {
+    supportPrice?: number | null;
+    resistancePrice?: number | null;
+    stopLossGuide?: number | null;
+    invalidationCondition: string;
+    supportDistancePercent?: number | null;
+    resistanceDistancePercent?: number | null;
+  };
+  newsInsight: {
+    sentiment: NewsSentiment;
+    sentimentScore: number;
+    oneLine: string;
+    keyIssues: string[];
+    positiveFactors: string[];
+    negativeFactors: string[];
+    riskFactors: string[];
+    watchPoints: string[];
+    articlesUsed: number;
+    confidence: "high" | "medium" | "low";
+  };
+  technicalVsNews: {
+    alignment: "aligned" | "diverged" | "mixed" | "insufficient";
+    label?: string;
+    message?: string;
+    summary: string;
+    newsDirection?: "positive" | "negative" | "mixed" | "insufficient";
+    chartDirection?: "bullish" | "weak" | "mixed" | "insufficient";
+  };
+  newsChartAlignment?: {
+    alignment: "aligned" | "diverged" | "mixed" | "insufficient";
+    label?: string;
+    message?: string;
+    summary: string;
+    newsDirection?: "positive" | "negative" | "mixed" | "insufficient";
+    chartDirection?: "bullish" | "weak" | "mixed" | "insufficient";
+  };
+  scenarios: {
+    name: string;
+    condition: string;
+    interpretation: string;
+    actionGuide: string;
+  }[];
   disclaimer: string;
 }
 
@@ -247,6 +324,7 @@ export interface NewsAnalysisResponse {
   negativeFactors: string[];
   riskFactors: string[];
   watchPoints: string[];
+  technicalVsNews?: "aligned" | "diverged" | "mixed" | "insufficient";
   newsItems: NewsArticle[];
   confidence: "high" | "medium" | "low";
   cacheHit: boolean;

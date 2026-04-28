@@ -12,7 +12,6 @@ import { NewsAiAnalysisCard } from "@/components/analyze/NewsAiAnalysisCard";
 import { QuoteCard } from "@/components/analyze/QuoteCard";
 import { RewardRiskCard } from "@/components/analyze/RewardRiskCard";
 import { RiskScoreCard } from "@/components/analyze/RiskScoreCard";
-import { ScenarioCard } from "@/components/analyze/ScenarioCard";
 import { StockInfoPanel } from "@/components/analyze/StockInfoPanel";
 import { StrategyPlanCard } from "@/components/analyze/StrategyPlanCard";
 import { Button } from "@/components/common/Button";
@@ -72,7 +71,6 @@ export function AnalysisTabs({ analysis, onAddToWatchlist }: { analysis: Analysi
               <RewardRiskCard analysis={analysis} />
               <RiskScoreCard analysis={analysis} />
             </div>
-            <ScenarioCard analysis={analysis} />
             <NewsAiAnalysisCard analysis={analysis} />
             <BacktestSummaryCard analysis={analysis} />
             <Button variant="secondary" className="w-full" onClick={onAddToWatchlist}>

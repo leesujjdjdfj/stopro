@@ -31,7 +31,7 @@ export const api = {
   dashboard: () => apiFetch<DashboardResponse>("/api/dashboard"),
   analyze: (payload: { ticker: string }) =>
     apiFetch<AnalysisResponse>("/api/analyze", { method: "POST", body: JSON.stringify(payload) }),
-  analyzeNews: (payload: { ticker: string; companyName?: string; currentPrice?: number; dailyChangePercent?: number | null }) =>
+  analyzeNews: (payload: { ticker: string; companyName?: string; currentPrice?: number; dailyChangePercent?: number | null; technicalContext?: Record<string, unknown> }) =>
     apiFetch<NewsAnalysisResponse>("/api/news-analysis", { method: "POST", body: JSON.stringify(payload) }),
   getWatchlist: () => apiFetch<WatchlistItem[]>("/api/watchlist"),
   addWatchlist: (payload: { ticker: string; note?: string }) =>

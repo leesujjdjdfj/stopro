@@ -58,6 +58,7 @@ KIS_APP_SECRET=
 KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 KIS_WS_URL=ws://ops.koreainvestment.com:31000
 KIS_QUOTE_CACHE_TTL_SECONDS=5
+KIS_TOKEN_CACHE_SECONDS=82800
 
 GNEWS_API_KEY=
 NEWS_API_KEY=
@@ -69,7 +70,11 @@ AI_PROVIDER=groq
 AI_MODEL=llama-3.1-8b-instant
 ```
 
-실전투자 도메인을 사용할 경우 `KIS_BASE_URL=https://openapi.koreainvestment.com:9443`로 설정합니다. KIS 토큰은 1분당 1회 발급 제한이 있어 `.kis_token_cache.json`에 로컬 캐시되며, 이 파일은 git에 포함하지 않습니다.
+실전투자 도메인을 사용할 경우 `KIS_BASE_URL=https://openapi.koreainvestment.com:9443`로 설정합니다.
+
+KIS access token은 사용자가 매일 직접 발급할 필요가 없습니다. 백엔드의 `KISTokenManager`가 시세 조회용 access token을 자동 발급하고, 기본 23시간(`KIS_TOKEN_CACHE_SECONDS=82800`) 동안 서버 메모리에 재사용합니다. 토큰이 만료되었거나 KIS가 401/토큰 만료 응답을 반환하면 기존 토큰을 폐기하고 1회만 자동 재발급 후 재시도합니다. 주문, 매매, 계좌 API는 구현하지 않으며 시세 조회용 토큰만 관리합니다.
+
+Vercel 배포 시에는 `stopro-api` 프로젝트의 Environment Variables에 `KIS_ENABLED`, `KIS_APP_KEY`, `KIS_APP_SECRET`, `KIS_BASE_URL`을 등록해야 합니다. `KIS_APP_SECRET`과 access token은 백엔드 환경에만 두고, 프론트 `.env`나 `NEXT_PUBLIC_` 변수로 노출하지 않습니다.
 
 뉴스/AI 분석 키 발급:
 
@@ -120,7 +125,16 @@ KIS 연결 테스트:
 ```powershell
 cd apps/api
 .venv\Scripts\python.exe app\test_kis.py 005930
+.venv\Scripts\python.exe scripts\test_kis_token.py 005930
 ```
+
+토큰 상태 확인:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/debug/kis/status
+```
+
+이 endpoint는 `configured`, `hasToken`, `expiresInSeconds`만 반환하며 access token 값은 절대 반환하지 않습니다.
 
 ### Frontend
 
@@ -148,6 +162,8 @@ npm run start -- --hostname 127.0.0.1 --port 3000
 - `POST /api/analyze`
 - `GET /api/news/{ticker}`
 - `POST /api/news-analysis`
+- `GET /api/debug/kis/status`
+- `POST /api/debug/kis/invalidate`
 - `GET /api/dashboard`
 - `GET /api/watchlist`
 - `POST /api/watchlist`

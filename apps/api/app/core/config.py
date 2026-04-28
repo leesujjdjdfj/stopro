@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     kis_base_url: str = "https://openapivts.koreainvestment.com:29443"
     kis_ws_url: str = "ws://ops.koreainvestment.com:31000"
     kis_quote_cache_ttl_seconds: int = 5
+    kis_token_cache_seconds: int = 82800
     gnews_api_key: Optional[str] = None
     news_api_key: Optional[str] = None
     news_provider: str = "gnews"

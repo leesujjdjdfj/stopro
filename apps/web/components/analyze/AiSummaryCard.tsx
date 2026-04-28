@@ -5,6 +5,20 @@ import { StockIdentity } from "@/components/common/StockIdentity";
 import type { AnalysisResponse } from "@/types/analysis";
 
 export function AiSummaryCard({ analysis }: { analysis: AnalysisResponse }) {
+  const insight = analysis.investmentInsight;
+  const label = insight?.finalLabel ?? analysis.decision.label;
+  const summary = insight?.oneLine ?? analysis.summary;
+  const badgeTone = insight
+    ? insight.tone === "positive"
+      ? "green"
+      : insight.tone === "danger" || insight.tone === "warning"
+        ? "red"
+        : "orange"
+    : analysis.decision.status === "candidate"
+      ? "green"
+      : analysis.decision.status === "caution" || analysis.decision.status === "avoid"
+        ? "red"
+        : "orange";
   return (
     <Card className="border-primary/20 bg-gradient-to-b from-white to-blue-50">
       <div className="flex items-start gap-3">
@@ -13,12 +27,11 @@ export function AiSummaryCard({ analysis }: { analysis: AnalysisResponse }) {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Badge tone={analysis.decision.status === "candidate" ? "green" : analysis.decision.status === "caution" || analysis.decision.status === "avoid" ? "red" : "orange"}>
-              {analysis.decision.label}
-            </Badge>
+            <Badge tone={badgeTone}>{label}</Badge>
+            {insight ? <span className="text-xs font-black text-subText">{insight.totalScore}점</span> : null}
           </div>
           <StockIdentity stock={analysis} className="mt-2" nameClassName="text-lg font-black text-text" />
-          <p className="mt-3 text-[15px] font-semibold leading-7 text-text">{analysis.summary}</p>
+          <p className="mt-3 text-[15px] font-semibold leading-7 text-text">{summary}</p>
         </div>
       </div>
     </Card>
